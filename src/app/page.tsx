@@ -43,7 +43,7 @@ const features = [
 ];
 
 const highlights = [
-  { label: "Quy mô phù hợp", value: "8-20", note: "người chơi mỗi bảng" },
+  { label: "Quy mô phù hợp", value: "5-20", note: "người chơi mỗi bảng" },
   { label: "Tối thiểu mỗi session", value: "5", note: "người để tạo buổi đấu" },
   { label: "Loại hình", value: "SRS", note: "mùa giải đánh đôi có xếp hạng" },
 ];
