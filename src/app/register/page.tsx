@@ -5,9 +5,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles, UserPlus } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
@@ -20,24 +25,25 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
 
     try {
-      const response = await apiFetch<{ token: string; user: User }>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ name, email, password }),
-      });
+      const response = await apiFetch<{ token: string; user: User }>(
+        "/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify({ name, email, password }),
+        },
+      );
 
       persistSession(response);
       router.push("/dashboard");
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Không thể tạo tài khoản.");
+    } catch {
+      return;
     } finally {
       setSubmitting(false);
     }
@@ -58,8 +64,8 @@ export default function RegisterPage() {
                   Tạo tài khoản quản trị để khởi động mùa giải đầu tiên.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-                  Sau khi đăng ký, bạn có thể dựng group, nhập roster, mở season, sinh buổi đấu và
-                  chốt kết quả trực tiếp trên dashboard mới.
+                  Sau khi đăng ký, bạn có thể dựng group, nhập roster, mở season,
+                  sinh buổi đấu và chốt kết quả trực tiếp trên dashboard mới.
                 </p>
               </div>
             </div>
@@ -70,9 +76,16 @@ export default function RegisterPage() {
                 { value: "∞", label: "buổi đấu có thể theo dõi" },
                 { value: "100%", label: "luồng điều phối trong một nơi" },
               ].map((item) => (
-                <div key={item.label} className="rounded-3xl border border-border/70 bg-background/75 p-5">
-                  <p className="font-heading text-3xl font-semibold text-foreground">{item.value}</p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.label}</p>
+                <div
+                  key={item.label}
+                  className="rounded-3xl border border-border/70 bg-background/75 p-5"
+                >
+                  <p className="font-heading text-3xl font-semibold text-foreground">
+                    {item.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {item.label}
+                  </p>
                 </div>
               ))}
             </div>
@@ -85,9 +98,12 @@ export default function RegisterPage() {
               <UserPlus className="size-5" />
             </div>
             <div className="space-y-2">
-              <CardTitle className="font-heading text-2xl">Tạo tài khoản</CardTitle>
+              <CardTitle className="font-heading text-2xl">
+                Tạo tài khoản
+              </CardTitle>
               <CardDescription>
-                Thiết lập tài khoản quản trị để bắt đầu quản lý bảng đấu của câu lạc bộ.
+                Thiết lập tài khoản quản trị để bắt đầu quản lý bảng đấu của
+                câu lạc bộ.
               </CardDescription>
             </div>
           </CardHeader>
@@ -129,13 +145,6 @@ export default function RegisterPage() {
                 />
               </div>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTitle>Không thể tạo tài khoản</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               <button
                 type="submit"
                 disabled={submitting}
@@ -148,7 +157,10 @@ export default function RegisterPage() {
 
             <div className="rounded-2xl border border-border/70 bg-muted/40 p-4 text-sm leading-6 text-muted-foreground">
               Đã có tài khoản?{" "}
-              <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+              <Link
+                href="/login"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
                 Chuyển sang đăng nhập
               </Link>
             </div>

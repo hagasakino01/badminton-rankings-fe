@@ -58,9 +58,12 @@ export type Session = {
   _id: string;
   groupId: string;
   seasonId: string;
+  title?: string;
+  note?: string;
   scheduledFor: string;
   participantIds: string[];
   absentPlayerIds: string[];
+  scheduleType: "auto" | "manual";
   isResultsSaved: boolean;
   createdBy: string;
   matches: Match[];

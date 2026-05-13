@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
+import { pushAppNotification } from "@/lib/app-feedback";
 import { cn } from "@/lib/utils";
 import type { Match, Session } from "@/types/api";
 
@@ -127,10 +128,14 @@ export function SessionEditor({
   }
 
   function handleOpenConfirm() {
-    if (isLocked) return;
+    if (isLocked) {
+      return;
+    }
 
     const results = buildResults();
-    if (!results) return;
+    if (!results) {
+      return;
+    }
 
     setStatus(null);
     setIsConfirmOpen(true);
@@ -153,30 +158,30 @@ export function SessionEditor({
         body: JSON.stringify({ results }),
       });
 
-      setStatus({
-        type: "success",
-        message: "Đã lưu và chốt kết quả buổi thi đấu.",
+      pushAppNotification({
+        title: "Lưu kết quả thành công",
+        message: "Buổi thi đấu đã được chốt kết quả.",
       });
       setIsConfirmOpen(false);
       await onChanged();
-    } catch (error) {
-      setStatus({
-        type: "error",
-        message:
-          error instanceof Error ? error.message : "Không thể lưu kết quả.",
-      });
+    } catch {
+      return;
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete() {
-    if (isLocked) return;
+    if (isLocked) {
+      return;
+    }
 
     const confirmed = window.confirm(
       "Xóa buổi thi đấu này? Các trận trong buổi sẽ bị xóa theo.",
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setDeleting(true);
     setStatus(null);
@@ -187,15 +192,14 @@ export function SessionEditor({
         token,
       });
 
-      await onChanged();
-    } catch (error) {
-      setStatus({
-        type: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Không thể xóa buổi thi đấu.",
+      pushAppNotification({
+        title: "Đã xóa buổi thi đấu",
+        message: "Session và toàn bộ trận trong buổi này đã được xóa.",
+        tone: "info",
       });
+      await onChanged();
+    } catch {
+      return;
     } finally {
       setDeleting(false);
     }
@@ -212,9 +216,12 @@ export function SessionEditor({
                   <CalendarDays className="size-3.5" />
                   {new Date(session.scheduledFor).toLocaleDateString("vi-VN")}
                 </Badge>
-                <Badge
-                  variant={session.isResultsSaved ? "default" : "secondary"}
-                >
+                <Badge variant="outline">
+                  {session.scheduleType === "manual"
+                    ? "Lịch thủ công"
+                    : "Lịch tự động"}
+                </Badge>
+                <Badge variant={session.isResultsSaved ? "default" : "secondary"}>
                   {session.isResultsSaved
                     ? "Đã lưu kết quả"
                     : "Chưa lưu kết quả"}
@@ -223,19 +230,22 @@ export function SessionEditor({
               </div>
               <div className="space-y-2">
                 <CardTitle className="font-heading text-2xl">
-                  Buổi thi đấu
+                  {session.title || "Buổi thi đấu"}
                 </CardTitle>
                 <p className="text-sm leading-6 text-muted-foreground">
                   <Users className="mr-2 inline size-4" />
                   {summary}
                 </p>
+                {session.note && (
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {session.note}
+                  </p>
+                )}
                 {!!session.absentPlayerIds.length && (
                   <p className="text-sm leading-6 text-muted-foreground">
                     Vắng:{" "}
                     {session.absentPlayerIds
-                      .map(
-                        (playerId) => playerMap[playerId] ?? "Unknown player",
-                      )
+                      .map((playerId) => playerMap[playerId] ?? "Unknown player")
                       .join(", ")}
                   </p>
                 )}
@@ -323,10 +333,9 @@ export function SessionEditor({
               </div>
             ))}
           </div>
+
           {status && (
-            <Alert
-              variant={status.type === "error" ? "destructive" : "default"}
-            >
+            <Alert variant={status.type === "error" ? "destructive" : "default"}>
               <AlertTitle>Trạng thái buổi đấu</AlertTitle>
               <AlertDescription>{status.message}</AlertDescription>
             </Alert>
@@ -348,7 +357,7 @@ export function SessionEditor({
                 className="w-full sm:w-auto"
               >
                 <Trash2 className="size-4" />
-                {deleting ? "Đang xóa..." : "Xóa buổi đấu"}
+                {deleting ? "Đang xóa..." : "Xóa buổi thi đấu"}
               </Button>
             )}
             <Button
@@ -368,10 +377,7 @@ export function SessionEditor({
         </CardFooter>
       </Card>
 
-      <Dialog
-        open={isConfirmOpen}
-        onOpenChange={(open) => setIsConfirmOpen(open)}
-      >
+      <Dialog open={isConfirmOpen} onOpenChange={(open) => setIsConfirmOpen(open)}>
         <DialogContent
           showCloseButton={!submitting}
           className="max-w-lg rounded-3xl p-0"
@@ -382,7 +388,7 @@ export function SessionEditor({
             </DialogTitle>
             <DialogDescription className="pt-1 text-sm leading-6">
               Sau khi xác nhận, kết quả sẽ được chốt và bạn sẽ không thể chỉnh
-              sửa hoặc xóa buổi đấu này nữa.
+              sửa hoặc xóa buổi thi đấu này nữa.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="rounded-b-3xl">

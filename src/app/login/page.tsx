@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -25,13 +24,11 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
 
     try {
       const response = await apiFetch<{ token: string; user: User }>(
@@ -44,12 +41,8 @@ export default function LoginPage() {
 
       persistSession(response);
       router.push("/dashboard");
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Đăng nhập thất bại.",
-      );
+    } catch {
+      return;
     } finally {
       setSubmitting(false);
     }
@@ -103,7 +96,9 @@ export default function LoginPage() {
               <KeyRound className="size-5" />
             </div>
             <div className="space-y-2">
-              <CardTitle className="font-heading text-2xl">Đăng nhập</CardTitle>
+              <CardTitle className="font-heading text-2xl">
+                Đăng nhập
+              </CardTitle>
               <CardDescription>
                 Truy cập dashboard để tạo bảng, mở mùa giải và nhập kết quả thi
                 đấu.
@@ -136,20 +131,10 @@ export default function LoginPage() {
                 />
               </div>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertTitle>Đăng nhập thất bại</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
               <button
                 type="submit"
                 disabled={submitting}
-                className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "w-full justify-center",
-                )}
+                className={cn(buttonVariants({ size: "lg" }), "w-full justify-center")}
               >
                 {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
                 {!submitting && <ArrowRight className="size-4" />}
