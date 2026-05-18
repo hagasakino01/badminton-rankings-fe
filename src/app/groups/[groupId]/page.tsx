@@ -824,23 +824,28 @@ export default function GroupDetailPage() {
                         <Badge variant={player.status === "active" ? "default" : "secondary"}>
                           {player.status}
                         </Badge>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={player.status === "active" ? "outline" : "default"}
-                          disabled={
-                            updatingPlayerId === player._id ||
-                            hasActiveSeason ||
-                            (player.status === "inactive" && hasReachedActiveLimit)
-                          }
-                          onClick={() => handleTogglePlayerStatus(player)}
-                        >
-                          {updatingPlayerId === player._id
-                            ? "Đang cập nhật..."
-                            : player.status === "active"
-                              ? "Chuyển inactive"
-                              : "Kích hoạt"}
-                        </Button>
+                        {hasActiveSeason ? (
+                          <span className="text-sm text-muted-foreground">
+                            Khóa khi mùa đang hoạt động
+                          </span>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={player.status === "active" ? "outline" : "default"}
+                            disabled={
+                              updatingPlayerId === player._id ||
+                              (player.status === "inactive" && hasReachedActiveLimit)
+                            }
+                            onClick={() => handleTogglePlayerStatus(player)}
+                          >
+                            {updatingPlayerId === player._id
+                              ? "Đang cập nhật..."
+                              : player.status === "active"
+                                ? "Chuyển inactive"
+                                : "Kích hoạt"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
