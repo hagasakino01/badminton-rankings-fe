@@ -309,7 +309,7 @@ export function SessionCreationForm({
     if (!hasEnoughParticipants) {
       setStatus({
         type: "error",
-        message: "C?n ch?n ?t nh?t 5 ng??i tham gia ?? t?o bu?i thi ??u.",
+        message: "Cần chọn ít nhất 5 người tham gia để tạo buổi thi đấu.",
       });
       return;
     }
@@ -351,11 +351,11 @@ export function SessionCreationForm({
       setTitle("");
       setNote("");
       pushAppNotification({
-        title: "T?o bu?i thi ??u th?nh c?ng",
+        title: "Tạo buổi thi đấu thành công",
         message:
           scheduleType === "manual"
-            ? "Session m?i ?? ???c t?o v?i l?ch th? c?ng."
-            : "Session m?i ?? ???c t?o v?i l?ch t? ??ng.",
+            ? "Session mới đã được tạo với lịch thủ công."
+            : "Session mới đã được tạo với lịch tự động.",
       });
 
       if (scheduleType === "manual") {

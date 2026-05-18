@@ -18,6 +18,11 @@ import { SessionEditor } from "@/components/session-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -46,6 +51,11 @@ type GroupResponse = {
   seasons: Season[];
 };
 
+type PlayerMutationResponse = {
+  player: Player;
+  message: string;
+};
+
 function getSeasonBadgeVariant(season?: Season) {
   if (!season) return "outline" as const;
   if (season.isLocked || season.status === "completed") return "destructive" as const;
@@ -67,6 +77,8 @@ export default function GroupDetailPage() {
     contactInfo: "",
   });
   const [seasonName, setSeasonName] = useState("");
+  const [addingPlayer, setAddingPlayer] = useState(false);
+  const [updatingPlayerId, setUpdatingPlayerId] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [deletingSeason, setDeletingSeason] = useState(false);
   const token = readSession()?.token ?? null;
@@ -86,6 +98,12 @@ export default function GroupDetailPage() {
     () => (groupData?.players ?? []).filter((player) => player.status === "active"),
     [groupData?.players],
   );
+  const hasActiveSeason = useMemo(
+    () => (groupData?.seasons ?? []).some((season) => season.status === "active"),
+    [groupData?.seasons],
+  );
+  const inactivePlayerCount = (groupData?.players.length ?? 0) - activePlayers.length;
+  const hasReachedActiveLimit = activePlayers.length >= 20;
 
   const currentSeason = seasonDetail?.season;
   const currentSeasonLocked = currentSeason?.isLocked ?? false;
@@ -192,8 +210,10 @@ export default function GroupDetailPage() {
       return;
     }
 
+    setAddingPlayer(true);
+
     try {
-      await apiFetch(`/groups/${groupId}/players`, {
+      const response = await apiFetch<PlayerMutationResponse>(`/groups/${groupId}/players`, {
         method: "POST",
         token,
         body: JSON.stringify(playerForm),
@@ -201,12 +221,46 @@ export default function GroupDetailPage() {
 
       setPlayerForm({ fullName: "", nickname: "", contactInfo: "" });
       pushAppNotification({
-        title: "Th?m th?nh vi?n th?nh c?ng",
-        message: "V?n ??ng vi?n m?i ?? ???c th?m v?o roster.",
+        title: "Thêm thành viên thành công",
+        message: response.message,
+        tone: response.player.status === "active" ? "success" : "info",
       });
       await refreshAll();
     } catch {
       return;
+    } finally {
+      setAddingPlayer(false);
+    }
+  }
+
+  async function handleTogglePlayerStatus(player: Player) {
+    if (!token) {
+      return;
+    }
+
+    const nextStatus = player.status === "active" ? "inactive" : "active";
+    setUpdatingPlayerId(player._id);
+
+    try {
+      const response = await apiFetch<PlayerMutationResponse>(
+        `/groups/${groupId}/players/${player._id}/status`,
+        {
+          method: "PATCH",
+          token,
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+
+      pushAppNotification({
+        title: "Cập nhật trạng thái thành công",
+        message: response.message,
+        tone: nextStatus === "active" ? "success" : "info",
+      });
+      await refreshAll();
+    } catch {
+      return;
+    } finally {
+      setUpdatingPlayerId(null);
     }
   }
 
@@ -229,8 +283,8 @@ export default function GroupDetailPage() {
       setSeasonName("");
       setSelectedSeasonId(response.season._id);
       pushAppNotification({
-        title: "T?o m?a gi?i th?nh c?ng",
-        message: `M?a "${response.season.name}" ?? s?n s?ng ?? s? d?ng.`,
+        title: "Tạo mùa giải thành công",
+        message: `Mùa "${response.season.name}" đã sẵn sàng để sử dụng.`,
       });
       await refreshAll(response.season._id);
     } catch {
@@ -250,8 +304,8 @@ export default function GroupDetailPage() {
       });
 
       pushAppNotification({
-        title: "?? t?ng k?t m?a gi?i",
-        message: "M?a gi?i hi?n t?i ?? ???c kh?a v? ch?t b?ng x?p h?ng.",
+        title: "Đã tổng kết mùa giải",
+        message: "Mùa giải hiện tại đã được khóa và chốt bảng xếp hạng.",
         tone: "info",
       });
       await refreshAll();
@@ -266,7 +320,7 @@ export default function GroupDetailPage() {
     }
 
     const confirmed = window.confirm(
-      `X?a b?ng "${groupData.group.name}" c?ng to?n b? m?a gi?i, bu?i ??u v? k?t qu??`,
+      `Xóa bảng "${groupData.group.name}" cùng toàn bộ mùa giải, buổi đấu và kết quả?`,
     );
     if (!confirmed) {
       return;
@@ -281,8 +335,8 @@ export default function GroupDetailPage() {
       });
 
       pushAppNotification({
-        title: "?? x?a b?ng ??u",
-        message: `B?ng "${groupData.group.name}" ?? ???c x?a.`,
+        title: "Đã xóa bảng đấu",
+        message: `Bảng "${groupData.group.name}" đã được xóa.`,
         tone: "info",
       });
       router.push("/dashboard");
@@ -299,7 +353,7 @@ export default function GroupDetailPage() {
     }
 
     const confirmed = window.confirm(
-      `X?a m?a "${seasonDetail.season.name}" v? to?n b? session/match c?a m?a n?y?`,
+      `Xóa mùa "${seasonDetail.season.name}" và toàn bộ session/trận của mùa này?`,
     );
     if (!confirmed) {
       return;
@@ -321,8 +375,8 @@ export default function GroupDetailPage() {
       setSeasonDetail(null);
       setSelectedSeasonId(nextSeasonId);
       pushAppNotification({
-        title: "?? x?a m?a gi?i",
-        message: `M?a "${seasonDetail.season.name}" ?? ???c g? kh?i b?ng ??u.`,
+        title: "Đã xóa mùa giải",
+        message: `Mùa "${seasonDetail.season.name}" đã được gỡ khỏi bảng đấu.`,
         tone: "info",
       });
       await refreshAll(nextSeasonId || undefined);
@@ -645,7 +699,23 @@ export default function GroupDetailPage() {
                   </CardDescription>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <AlertTitle>
+                    {hasActiveSeason
+                      ? "Thành viên mới sẽ được thêm dưới dạng inactive"
+                      : hasReachedActiveLimit
+                        ? "Đã chạm giới hạn 20 active"
+                        : "Thành viên mới sẽ được thêm dưới dạng active"}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {hasActiveSeason
+                      ? "Bảng đấu đang có mùa giải hoạt động. Thành viên mới sẽ ở trạng thái inactive và chưa thể tham gia mùa hiện tại."
+                      : hasReachedActiveLimit
+                        ? "Roster đã có đủ 20 thành viên active. Thành viên mới vẫn được lưu, nhưng sẽ ở trạng thái inactive cho đến khi bạn giảm bớt số active."
+                        : "Hiện không có mùa giải active, nên thành viên mới sẽ sẵn sàng cho các mùa hoặc buổi thi đấu tiếp theo ngay sau khi được thêm."}
+                  </AlertDescription>
+                </Alert>
                 <form className="space-y-4" onSubmit={handleAddPlayer}>
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Họ tên</Label>
@@ -687,8 +757,8 @@ export default function GroupDetailPage() {
                       }
                     />
                   </div>
-                  <Button type="submit" className="w-full justify-center">
-                    Thêm người chơi
+                  <Button type="submit" className="w-full justify-center" disabled={addingPlayer}>
+                    {addingPlayer ? "Đang thêm thành viên..." : "Thêm người chơi"}
                   </Button>
                 </form>
               </CardContent>
@@ -713,7 +783,7 @@ export default function GroupDetailPage() {
                   <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
                     <p className="text-sm text-muted-foreground">Inactive</p>
                     <p className="mt-2 font-heading text-3xl font-semibold">
-                      {(groupData?.players.length ?? 0) - activePlayers.length}
+                      {inactivePlayerCount}
                     </p>
                   </div>
                   <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
@@ -721,6 +791,22 @@ export default function GroupDetailPage() {
                     <p className="mt-2 font-heading text-3xl font-semibold">20</p>
                   </div>
                 </div>
+
+                {hasActiveSeason ? (
+                  <Alert>
+                    <AlertTitle>Đang có mùa giải hoạt động</AlertTitle>
+                    <AlertDescription>
+                      Bạn chưa thể chuyển thành viên giữa active/inactive cho đến khi mùa hiện tại kết thúc.
+                    </AlertDescription>
+                  </Alert>
+                ) : hasReachedActiveLimit ? (
+                  <Alert>
+                    <AlertTitle>Roster đã đạt tối đa 20 active</AlertTitle>
+                    <AlertDescription>
+                      Bạn vẫn có thể chuyển active sang inactive. Để kích hoạt thêm thành viên khác, hãy giảm bớt số active hiện tại.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
                 <div className="grid gap-3">
                   {(groupData?.players ?? []).map((player) => (
@@ -734,9 +820,28 @@ export default function GroupDetailPage() {
                           {player.nickname || player.contactInfo || "Chưa có ghi chú thêm."}
                         </p>
                       </div>
-                      <Badge variant={player.status === "active" ? "default" : "secondary"}>
-                        {player.status}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={player.status === "active" ? "default" : "secondary"}>
+                          {player.status}
+                        </Badge>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={player.status === "active" ? "outline" : "default"}
+                          disabled={
+                            updatingPlayerId === player._id ||
+                            hasActiveSeason ||
+                            (player.status === "inactive" && hasReachedActiveLimit)
+                          }
+                          onClick={() => handleTogglePlayerStatus(player)}
+                        >
+                          {updatingPlayerId === player._id
+                            ? "Đang cập nhật..."
+                            : player.status === "active"
+                              ? "Chuyển inactive"
+                              : "Kích hoạt"}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

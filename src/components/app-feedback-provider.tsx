@@ -29,12 +29,14 @@ type AppFeedbackProviderProps = {
   children: React.ReactNode;
 };
 
+const SERVER_SNAPSHOT: ReturnType<typeof getAppFeedbackSnapshot> = {
+  pendingRequests: 0,
+  errorQueue: [],
+  notifications: [],
+};
+
 function getServerSnapshot() {
-  return {
-    pendingRequests: 0,
-    errorQueue: [],
-    notifications: [],
-  };
+  return SERVER_SNAPSHOT;
 }
 
 export function AppFeedbackProvider({ children }: AppFeedbackProviderProps) {
@@ -100,7 +102,7 @@ export function AppFeedbackProvider({ children }: AppFeedbackProviderProps) {
                 Đang xử lý
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Hệ thống đang gọi API và đồng bộ dữ liệu. Vui lòng chờ trong giây lát.
+                Vui lòng chờ trong giây lát.
               </p>
             </div>
           </div>
@@ -133,7 +135,9 @@ export function AppFeedbackProvider({ children }: AppFeedbackProviderProps) {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground">{notification.title}</p>
+                    <p className="font-medium text-foreground">
+                      {notification.title}
+                    </p>
                     {notification.message && (
                       <p className="mt-1 text-sm leading-6 text-muted-foreground">
                         {notification.message}
