@@ -108,6 +108,7 @@ export default function GroupDetailPage() {
   const currentSeason = seasonDetail?.season;
   const currentSeasonLocked = currentSeason?.isLocked ?? false;
   const topPlayer = seasonDetail?.rankings.rows[0];
+  const rankingRows = seasonDetail?.rankings.rows ?? [];
 
   async function loadGroup(sessionToken: string) {
     const response = await apiFetch<GroupResponse>(`/groups/${groupId}`, {
@@ -392,10 +393,10 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
         <Card className="border-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.94),rgba(26,53,88,0.92))] text-primary-foreground shadow-2xl shadow-primary/15 ring-1 ring-white/10">
-          <CardContent className="grid gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+          <CardContent className="grid gap-6 px-5 py-6 sm:gap-8 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
             <div className="flex flex-wrap items-center gap-3">
               <Badge className="bg-white/12 text-white hover:bg-white/18">
                 Chi tiết bảng đấu
@@ -406,7 +407,7 @@ export default function GroupDetailPage() {
             </div>
 
             <div className="space-y-4">
-              <h1 className="font-heading text-4xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
+              <h1 className="font-heading text-3xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
                 {groupData?.group.name ?? "Đang tải bảng đấu..."}
               </h1>
               <p className="max-w-2xl text-base leading-7 text-white/78">
@@ -478,20 +479,22 @@ export default function GroupDetailPage() {
       </section>
 
       <Tabs defaultValue="overview" className="gap-6">
+        <div className="overflow-x-auto no-scrollbar">
         <TabsList
           variant="line"
-          className="h-auto w-full justify-start gap-1 rounded-none border-b bg-transparent p-0"
+          className="h-auto w-max min-w-full justify-start gap-1 rounded-none border-b bg-transparent p-0"
         >
-          <TabsTrigger value="overview" className="rounded-t-xl px-4 py-3">
+          <TabsTrigger value="overview" className="flex-none rounded-t-xl px-4 py-3">
             Tổng quan
           </TabsTrigger>
-          <TabsTrigger value="players" className="rounded-t-xl px-4 py-3">
+          <TabsTrigger value="players" className="flex-none rounded-t-xl px-4 py-3">
             Vận động viên
           </TabsTrigger>
-          <TabsTrigger value="sessions" className="rounded-t-xl px-4 py-3">
+          <TabsTrigger value="sessions" className="flex-none rounded-t-xl px-4 py-3">
             Buổi đấu
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <section className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -532,7 +535,7 @@ export default function GroupDetailPage() {
                     <CalendarDays className="size-4 text-primary" />
                     <p className="text-sm font-medium">Danh sách mùa</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                     {(groupData?.seasons ?? []).length ? (
                       groupData?.seasons.map((season) => (
                         <Button
@@ -540,6 +543,7 @@ export default function GroupDetailPage() {
                           type="button"
                           variant={season._id === selectedSeasonId ? "default" : "outline"}
                           onClick={() => setSelectedSeasonId(season._id)}
+                          className="shrink-0"
                         >
                           {season.name}
                         </Button>
@@ -603,7 +607,7 @@ export default function GroupDetailPage() {
                         type="button"
                         onClick={handleFinalizeSeason}
                         disabled={currentSeasonLocked}
-                        className="flex-1"
+                        className="w-full flex-1"
                       >
                         {currentSeasonLocked ? "Mùa đã khóa" : "Tổng kết mùa"}
                       </Button>
@@ -612,7 +616,7 @@ export default function GroupDetailPage() {
                         type="button"
                         onClick={handleDeleteSeason}
                         disabled={deletingSeason}
-                        className="flex-1"
+                        className="w-full flex-1"
                       >
                         {deletingSeason ? "Đang xóa..." : "Xóa mùa"}
                       </Button>
@@ -640,9 +644,55 @@ export default function GroupDetailPage() {
                 và số lần vắng.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {seasonDetail ? (
-                <Table>
+            <CardContent className="space-y-4">
+              {seasonDetail && rankingRows.length ? (
+                <>
+                  <div className="grid gap-3 md:hidden">
+                    {rankingRows.map((row) => (
+                      <div
+                        key={row.playerId}
+                        className="rounded-3xl border border-border/70 bg-background/75 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <p className="text-xs uppercase tracking-[0.22em] text-primary">
+                              Hạng {row.rank}
+                            </p>
+                            <p className="break-words font-medium">
+                              {row.nickname ? `${row.fullName} (${row.nickname})` : row.fullName}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">{row.points} điểm</Badge>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-2xl bg-muted/35 px-3 py-2">
+                            <p className="text-muted-foreground">W-L</p>
+                            <p className="mt-1 font-medium">
+                              {row.wins}-{row.losses}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl bg-muted/35 px-3 py-2">
+                            <p className="text-muted-foreground">Tỷ lệ thắng</p>
+                            <p className="mt-1 font-medium">{Math.round(row.winRate * 100)}%</p>
+                          </div>
+                          <div className="rounded-2xl bg-muted/35 px-3 py-2">
+                            <p className="text-muted-foreground">Hiệu số</p>
+                            <p className="mt-1 font-medium">{row.scoreDifference}</p>
+                          </div>
+                          <div className="rounded-2xl bg-muted/35 px-3 py-2">
+                            <p className="text-muted-foreground">Buổi / vắng</p>
+                            <p className="mt-1 font-medium">
+                              {row.sessionsAttended} / {row.absences}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden md:block">
+                    <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>#</TableHead>
@@ -656,7 +706,7 @@ export default function GroupDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {seasonDetail.rankings.rows.map((row) => (
+                    {rankingRows.map((row) => (
                       <TableRow key={row.playerId}>
                         <TableCell>{row.rank}</TableCell>
                         <TableCell>
@@ -674,6 +724,8 @@ export default function GroupDetailPage() {
                     ))}
                   </TableBody>
                 </Table>
+                  </div>
+                </>
               ) : (
                 <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-5 py-10 text-center text-sm text-muted-foreground">
                   Chưa có dữ liệu xếp hạng cho mùa này.
@@ -814,13 +866,13 @@ export default function GroupDetailPage() {
                       key={player._id}
                       className="flex flex-col gap-3 rounded-3xl border border-border/70 bg-background/75 p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="space-y-1">
+                      <div className="min-w-0 space-y-1">
                         <p className="font-medium">{player.fullName}</p>
                         <p className="text-sm text-muted-foreground">
                           {player.nickname || player.contactInfo || "Chưa có ghi chú thêm."}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                         <Badge variant={player.status === "active" ? "default" : "secondary"}>
                           {player.status}
                         </Badge>
@@ -833,6 +885,7 @@ export default function GroupDetailPage() {
                             type="button"
                             size="sm"
                             variant={player.status === "active" ? "outline" : "default"}
+                            className="w-full sm:w-auto"
                             disabled={
                               updatingPlayerId === player._id ||
                               (player.status === "inactive" && hasReachedActiveLimit)

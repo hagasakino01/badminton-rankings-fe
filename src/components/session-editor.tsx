@@ -210,7 +210,7 @@ export function SessionEditor({
       <Card className="border-0 bg-card/88 shadow-lg shadow-black/5 ring-1 ring-black/6">
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
+            <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="gap-1">
                   <CalendarDays className="size-3.5" />
@@ -228,14 +228,14 @@ export function SessionEditor({
                 </Badge>
                 <Badge variant="outline">{session.matches.length} trận</Badge>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <CardTitle className="font-heading text-2xl">
                   {session.title || "Buổi thi đấu"}
                 </CardTitle>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  <Users className="mr-2 inline size-4" />
-                  {summary}
-                </p>
+                <div className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+                  <Users className="mt-1 size-4 shrink-0" />
+                  <p>{summary}</p>
+                </div>
                 {session.note && (
                   <p className="text-sm leading-6 text-muted-foreground">
                     {session.note}
@@ -285,7 +285,7 @@ export function SessionEditor({
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 self-center">
+                <div className="flex items-center gap-3 self-start rounded-2xl border border-border/60 bg-muted/25 px-3 py-2 sm:self-center sm:border-0 sm:bg-transparent sm:p-0">
                   <Input
                     inputMode="numeric"
                     type="number"

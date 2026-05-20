@@ -170,20 +170,24 @@ export function AppFeedbackProvider({ children }: AppFeedbackProviderProps) {
           }
         }}
       >
-        <DialogContent className="max-w-lg rounded-[30px] p-0">
-          <DialogHeader className="px-6 pt-6">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-destructive/12 text-destructive">
-              <TriangleAlert className="size-5" />
+        <DialogContent showCloseButton={false} className="max-w-lg overflow-hidden rounded-[32px] border-0 bg-card/98 p-0 shadow-2xl shadow-black/15 ring-1 ring-black/8">
+          <DialogHeader className="items-center px-6 pt-7 text-center sm:px-8">
+            <div className="mb-2 flex size-14 items-center justify-center rounded-full bg-destructive/12 text-destructive shadow-sm ring-1 ring-destructive/10">
+              <TriangleAlert className="size-6" />
             </div>
-            <DialogTitle className="font-heading text-2xl">
-              {activeError?.title ?? "Lỗi API"}
+            <DialogTitle className="max-w-md text-center font-heading text-2xl">
+              {activeError?.title ?? "Không thể xử lý yêu cầu"}
             </DialogTitle>
-            <DialogDescription className="pt-1 text-sm leading-6">
+            <DialogDescription className="max-w-md pt-1 text-center text-sm leading-7 whitespace-pre-line">
               {activeError?.message ?? "Đã xảy ra lỗi khi gọi API."}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="rounded-b-[30px]">
-            <Button type="button" onClick={() => dismissCurrentApiErrorModal()}>
+          <DialogFooter className="justify-center rounded-b-[32px] bg-muted/35 px-6 py-5 sm:px-8">
+            <Button
+              type="button"
+              className="min-w-36"
+              onClick={() => dismissCurrentApiErrorModal()}
+            >
               Đã hiểu
             </Button>
           </DialogFooter>

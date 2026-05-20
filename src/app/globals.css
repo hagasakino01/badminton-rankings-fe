@@ -138,3 +138,14 @@
     background: color-mix(in oklab, var(--primary) 30%, transparent);
   }
 }
+
+@layer utilities {
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}

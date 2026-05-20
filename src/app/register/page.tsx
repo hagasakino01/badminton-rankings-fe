@@ -50,9 +50,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(360px,0.88fr)]">
-        <Card className="border-0 bg-[linear-gradient(145deg,rgba(250,248,241,0.96),rgba(225,238,233,0.92))] shadow-2xl shadow-black/6 ring-1 ring-black/6">
+        <Card className="order-2 border-0 bg-[linear-gradient(145deg,rgba(250,248,241,0.96),rgba(225,238,233,0.92))] shadow-2xl shadow-black/6 ring-1 ring-black/6 lg:order-1">
           <CardContent className="flex h-full flex-col justify-between gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs uppercase tracking-[0.24em] text-primary">
@@ -60,7 +60,7 @@ export default function RegisterPage() {
                 New control room
               </div>
               <div className="space-y-4">
-                <h1 className="max-w-2xl font-heading text-4xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
+                <h1 className="max-w-2xl font-heading text-3xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
                   Tạo tài khoản quản trị để khởi động mùa giải đầu tiên.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground">
@@ -92,7 +92,7 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-card/90 shadow-xl shadow-black/5 ring-1 ring-black/6 backdrop-blur">
+        <Card className="order-1 border-0 bg-card/90 shadow-xl shadow-black/5 ring-1 ring-black/6 backdrop-blur lg:order-2">
           <CardHeader className="space-y-3">
             <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <UserPlus className="size-5" />

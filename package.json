@@ -2,7 +2,7 @@
   "name": "br-fe",
   "version": "1.0.0",
   "private": true,
-  "description": "Badminton rankings frontend",
+  "description": "Diamond Ranking frontend",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

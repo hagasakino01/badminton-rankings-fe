@@ -446,7 +446,7 @@ export function SessionCreationForm({
                         }
                         disabled={currentSeasonLocked || submitting}
                       />
-                      <div className="space-y-1">
+                      <div className="min-w-0 space-y-1">
                         <p className="font-medium">{playerMap[player._id]}</p>
                         <p className="text-sm text-muted-foreground">
                           {player.contactInfo || "Sẵn sàng thi đấu"}
@@ -572,12 +572,13 @@ export function SessionCreationForm({
                     trận.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleCheckManualSchedule}
                     disabled={submitting}
+                    className="w-full sm:w-auto"
                   >
                     <CalendarDays className="size-4" />
                     Kiểm tra lịch
@@ -588,6 +589,7 @@ export function SessionCreationForm({
                       variant="outline"
                       onClick={handleFillRequiredMatches}
                       disabled={submitting}
+                      className="w-full sm:w-auto"
                     >
                       <Plus className="size-4" />
                       Bù đủ {remainingBlankMatches} trận
@@ -598,6 +600,7 @@ export function SessionCreationForm({
                     variant="secondary"
                     onClick={handleAddManualMatch}
                     disabled={submitting}
+                    className="w-full sm:w-auto"
                   >
                     <Plus className="size-4" />
                     Thêm trận
@@ -624,7 +627,7 @@ export function SessionCreationForm({
                             key={playerId}
                             className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/75 px-3 py-2"
                           >
-                            <span className="min-w-0 text-sm font-medium">
+                            <span className="min-w-0 break-words text-sm font-medium">
                               {playerMap[playerId]}
                             </span>
                             <Badge

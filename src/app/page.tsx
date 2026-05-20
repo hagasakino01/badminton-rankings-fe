@@ -50,32 +50,32 @@ const highlights = [
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
         <Card className="overflow-hidden border-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.96),rgba(18,52,86,0.95))] text-primary-foreground shadow-2xl shadow-primary/15 ring-1 ring-white/10">
-          <CardContent className="grid gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+          <CardContent className="grid gap-6 px-5 py-6 sm:gap-8 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
             <div className="flex flex-wrap items-center gap-3">
               <Badge className="bg-white/14 text-white hover:bg-white/20">Phiên bản điều phối mùa giải</Badge>
               <Badge className="bg-white/10 text-white/80 hover:bg-white/15">Shadcn UI refresh</Badge>
             </div>
 
             <div className="space-y-5">
-              <p className="text-sm uppercase tracking-[0.3em] text-white/70">Badminton Club OS</p>
-              <h1 className="max-w-4xl font-heading text-4xl leading-none font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+              <p className="text-sm uppercase tracking-[0.3em] text-white/70">Diamond Ranking</p>
+              <h1 className="max-w-4xl font-heading text-3xl leading-none font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
                 Bỏ spreadsheet đi. Vận hành cả mùa giải trên một giao diện rõ ràng hơn.
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
+              <p className="max-w-2xl text-sm leading-7 text-white/78 sm:text-lg">
                 Từ tạo bảng, mở mùa, sinh buổi đấu, nhập tỷ số đến tổng kết xếp hạng cá nhân, mọi thứ
                 được gom vào một mặt điều phối nhất quán dành riêng cho giải cầu lông đánh đôi.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 href="/register"
                 className={cn(
                   buttonVariants({ size: "lg" }),
-                  "bg-white text-slate-900 hover:bg-white/88",
+                  "w-full bg-white text-slate-900 hover:bg-white/88 sm:w-auto",
                 )}
               >
                 Bắt đầu tạo giải
@@ -85,7 +85,7 @@ export default function HomePage() {
                 href="/dashboard"
                 className={cn(
                   buttonVariants({ variant: "outline", size: "lg" }),
-                  "border-white/25 bg-white/10 text-white hover:bg-white/14 hover:text-white",
+                  "w-full border-white/25 bg-white/10 text-white hover:bg-white/14 hover:text-white sm:w-auto",
                 )}
               >
                 Mở dashboard
@@ -225,7 +225,7 @@ export default function HomePage() {
               Bộ component mới giúp form, modal, card, bảng và trạng thái nhìn đồng nhất hơn, đồng
               thời dễ bảo trì hơn cho các bước phát triển tiếp theo.
             </div>
-            <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "w-full justify-center")}>
+            <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "w-full justify-center sm:w-auto")}>
               Tạo tài khoản quản trị
             </Link>
           </CardContent>

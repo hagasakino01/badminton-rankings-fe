@@ -152,10 +152,10 @@ export default function DashboardPage() {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
         <Card className="border-0 bg-[linear-gradient(135deg,rgba(15,118,110,0.94),rgba(26,53,88,0.92))] text-primary-foreground shadow-2xl shadow-primary/15 ring-1 ring-white/10">
-          <CardContent className="grid gap-8 px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+          <CardContent className="grid gap-6 px-5 py-6 sm:gap-8 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
             <div className="flex flex-wrap items-center gap-3">
               <Badge className="bg-white/12 text-white hover:bg-white/18">
                 Dashboard
@@ -166,7 +166,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-4">
-              <h1 className="max-w-3xl font-heading text-4xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
+              <h1 className="max-w-3xl font-heading text-3xl leading-none font-semibold tracking-tight text-balance sm:text-5xl">
                 Điều phối các bảng đấu và mùa giải từ một mặt điều khiển duy
                 nhất.
               </h1>
@@ -369,7 +369,7 @@ export default function DashboardPage() {
                           href={`/groups/${group._id}`}
                           className={cn(
                             buttonVariants({ size: "default" }),
-                            "gap-2",
+                            "w-full gap-2 sm:w-auto",
                           )}
                         >
                           Mở bảng
@@ -382,6 +382,7 @@ export default function DashboardPage() {
                             handleDeleteGroup(group._id, group.name)
                           }
                           disabled={deletingGroupId === group._id}
+                          className="w-full sm:w-auto"
                         >
                           {deletingGroupId === group._id
                             ? "Đang xóa..."

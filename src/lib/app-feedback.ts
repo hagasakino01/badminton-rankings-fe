@@ -86,7 +86,7 @@ export function endAppRequest() {
   }));
 }
 
-export function showApiErrorModal(message: string, title = "Lỗi API") {
+export function showApiErrorModal(message: string, title = "Không thể xử lý yêu cầu") {
   updateState((current) => ({
     ...current,
     errorQueue: [

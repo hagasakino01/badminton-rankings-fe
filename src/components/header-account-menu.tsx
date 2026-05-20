@@ -238,14 +238,14 @@ export function HeaderAccountMenu() {
 
   if (!session) {
     return (
-      <nav className="flex items-center gap-2">
-        <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "gap-2")}>
+      <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <Link aria-label="Dashboard" href="/dashboard" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "size-11 gap-0 px-0 sm:h-9 sm:w-auto sm:gap-2 sm:px-2.5")}>
           <LayoutDashboard className="size-4" />
-          Dashboard
+          <span className="hidden sm:inline">Dashboard</span>
         </Link>
-        <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}>
+        <Link aria-label="Đăng nhập" href="/login" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}>
           <LogIn className="size-4" />
-          Đăng nhập
+          <span className="hidden sm:inline">Đăng nhập</span>
         </Link>
       </nav>
     );
@@ -253,10 +253,10 @@ export function HeaderAccountMenu() {
 
   return (
     <>
-      <div className="flex items-center gap-2" ref={menuRef}>
-        <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "gap-2")}>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2" ref={menuRef}>
+        <Link aria-label="Dashboard" href="/dashboard" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "size-11 gap-0 px-0 sm:h-9 sm:w-auto sm:gap-2 sm:px-2.5")}>
           <LayoutDashboard className="size-4" />
-          Dashboard
+          <span className="hidden sm:inline">Dashboard</span>
         </Link>
 
         <div className="relative">
@@ -264,16 +264,17 @@ export function HeaderAccountMenu() {
             variant="outline"
             size="lg"
             type="button"
-            className="gap-2"
+            aria-label="Tài khoản"
+            className="h-11 gap-1 px-2.5 sm:h-9 sm:gap-2 sm:px-2.5"
             onClick={() => setIsMenuOpen((current) => !current)}
           >
             <UserRound className="size-4" />
-            <span className="max-w-40 truncate">{session.user.name}</span>
+            <span className="hidden max-w-40 truncate sm:inline">{session.user.name}</span>
             <ChevronDown className="size-4" />
           </Button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl shadow-black/10">
+            <div className="absolute right-0 z-50 mt-2 w-[min(14rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl shadow-black/10">
               <div className="border-b border-border px-3 py-2">
                 <p className="truncate font-medium">{session.user.name}</p>
                 <p className="truncate text-sm text-muted-foreground">{session.user.email}</p>
