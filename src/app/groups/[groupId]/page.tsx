@@ -17,11 +17,7 @@ import { SessionCreationForm } from "@/components/session-creation-form";
 import { SessionEditor } from "@/components/session-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -40,8 +36,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiFetch } from "@/lib/api";
-import { pushAppNotification } from "@/lib/app-feedback";
+import { ApiError, apiFetch } from "@/lib/api";
+import { pushAppNotification, showApiErrorModal } from "@/lib/app-feedback";
 import { readSession } from "@/lib/auth";
 import type { Group, Player, Season, SeasonDetail } from "@/types/api";
 
@@ -56,11 +52,64 @@ type PlayerMutationResponse = {
   message: string;
 };
 
+type GroupPageTab = "overview" | "players" | "sessions";
+
+const CREATE_SEASON_PLAYER_REQUIREMENT_MESSAGE =
+  "Để tạo mùa giải, nhóm của bạn cần có từ 5 đến 20 thành viên ở trạng thái hoạt động.";
+
+const SESSION_TAB_SEASON_REQUIREMENT_MESSAGE =
+  "Bạn cần có mùa giải để có thể tạo và theo dõi câc trận đấu";
+
+function getApiErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    if (/fetch|network/i.test(error.message)) {
+      return "Không thể kết nối đến máy chủ. Vui lòng thử lại sau.";
+    }
+
+    if (error.message.trim()) {
+      return error.message;
+    }
+  }
+
+  return "Đã xảy ra lỗi khi gọi API.";
+}
+
 function getSeasonBadgeVariant(season?: Season) {
   if (!season) return "outline" as const;
-  if (season.isLocked || season.status === "completed") return "destructive" as const;
+  if (season.isLocked || season.status === "completed")
+    return "destructive" as const;
   if (season.status === "active") return "default" as const;
   return "secondary" as const;
+}
+
+function getPlayerStatusLabel(status: Player["status"]) {
+  return status === "active" ? "Hoạt động" : "Không hoạt động";
+}
+
+function getSeasonStatusLabel(status?: Season["status"]) {
+  if (status === "active") return "Hoạt động";
+  if (status === "completed") return "Hoàn tất";
+  if (status === "draft") return "Chưa khởi động";
+  return "Chưa chọn mùa";
+}
+
+function getSeasonListButtonClass(season: Season, isSelected: boolean) {
+  if (isSelected) {
+    return "";
+  }
+
+  const toneClass =
+    season.status === "completed"
+      ? "border-[#F5C5C7] bg-[#F5C5C7] hover:bg-[#efb4b7]"
+      : season.status === "draft"
+        ? "border-[#FAF2E4] bg-[#FAF2E4] hover:bg-[#f2e7d4]"
+        : "border-[#CCF1D5] bg-[#CCF1D5] hover:bg-[#bce7c8]";
+
+  return `${toneClass} text-foreground hover:text-foreground`;
 }
 
 export default function GroupDetailPage() {
@@ -70,6 +119,7 @@ export default function GroupDetailPage() {
 
   const [groupData, setGroupData] = useState<GroupResponse | null>(null);
   const [seasonDetail, setSeasonDetail] = useState<SeasonDetail | null>(null);
+  const [activeTab, setActiveTab] = useState<GroupPageTab>("overview");
   const [selectedSeasonId, setSelectedSeasonId] = useState("");
   const [playerForm, setPlayerForm] = useState({
     fullName: "",
@@ -88,21 +138,27 @@ export default function GroupDetailPage() {
       Object.fromEntries(
         (groupData?.players ?? []).map((player) => [
           player._id,
-          player.nickname ? `${player.fullName} (${player.nickname})` : player.fullName,
+          player.nickname
+            ? `${player.fullName} (${player.nickname})`
+            : player.fullName,
         ]),
       ),
     [groupData?.players],
   );
 
   const activePlayers = useMemo(
-    () => (groupData?.players ?? []).filter((player) => player.status === "active"),
+    () =>
+      (groupData?.players ?? []).filter((player) => player.status === "active"),
     [groupData?.players],
   );
   const hasActiveSeason = useMemo(
-    () => (groupData?.seasons ?? []).some((season) => season.status === "active"),
+    () =>
+      (groupData?.seasons ?? []).some((season) => season.status === "active"),
     [groupData?.seasons],
   );
-  const inactivePlayerCount = (groupData?.players.length ?? 0) - activePlayers.length;
+  const hasAnySeason = (groupData?.seasons.length ?? 0) > 0;
+  const inactivePlayerCount =
+    (groupData?.players.length ?? 0) - activePlayers.length;
   const hasReachedActiveLimit = activePlayers.length >= 20;
 
   const currentSeason = seasonDetail?.season;
@@ -175,9 +231,12 @@ export default function GroupDetailPage() {
 
     async function syncSeason() {
       try {
-        const response = await apiFetch<SeasonDetail>(`/seasons/${selectedSeasonId}`, {
-          token: sessionToken,
-        });
+        const response = await apiFetch<SeasonDetail>(
+          `/seasons/${selectedSeasonId}`,
+          {
+            token: sessionToken,
+          },
+        );
         if (!isMounted) return;
         setSeasonDetail(response);
       } catch {
@@ -214,11 +273,14 @@ export default function GroupDetailPage() {
     setAddingPlayer(true);
 
     try {
-      const response = await apiFetch<PlayerMutationResponse>(`/groups/${groupId}/players`, {
-        method: "POST",
-        token,
-        body: JSON.stringify(playerForm),
-      });
+      const response = await apiFetch<PlayerMutationResponse>(
+        `/groups/${groupId}/players`,
+        {
+          method: "POST",
+          token,
+          body: JSON.stringify(playerForm),
+        },
+      );
 
       setPlayerForm({ fullName: "", nickname: "", contactInfo: "" });
       pushAppNotification({
@@ -271,12 +333,22 @@ export default function GroupDetailPage() {
       return;
     }
 
+    if (activePlayers.length < 5 || activePlayers.length > 20) {
+      showApiErrorModal(
+        CREATE_SEASON_PLAYER_REQUIREMENT_MESSAGE,
+        undefined,
+        () => setActiveTab("players"),
+      );
+      return;
+    }
+
     try {
       const response = await apiFetch<{ season: Season }>(
         `/seasons/groups/${groupId}/seasons`,
         {
           method: "POST",
           token,
+          showErrorModal: false,
           body: JSON.stringify({ name: seasonName }),
         },
       );
@@ -288,7 +360,21 @@ export default function GroupDetailPage() {
         message: `Mùa "${response.season.name}" đã sẵn sàng để sử dụng.`,
       });
       await refreshAll(response.season._id);
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return;
+      }
+
+      const message = getApiErrorMessage(error);
+
+      showApiErrorModal(
+        message,
+        undefined,
+        message === CREATE_SEASON_PLAYER_REQUIREMENT_MESSAGE
+          ? () => setActiveTab("players")
+          : undefined,
+      );
+
       return;
     }
   }
@@ -392,6 +478,19 @@ export default function GroupDetailPage() {
     await refreshAll();
   }
 
+  function handleTabChange(value: string) {
+    const nextTab = value as GroupPageTab;
+
+    if (nextTab === "sessions" && !hasAnySeason) {
+      showApiErrorModal(SESSION_TAB_SEASON_REQUIREMENT_MESSAGE, undefined, () =>
+        setActiveTab("overview"),
+      );
+      return;
+    }
+
+    setActiveTab(nextTab);
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
@@ -419,14 +518,16 @@ export default function GroupDetailPage() {
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-3xl bg-black/12 p-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-white/55">
-                  Active players
+                  Thành viên hoạt động
                 </p>
                 <p className="mt-3 font-heading text-4xl font-semibold">
                   {activePlayers.length}
                 </p>
               </div>
               <div className="rounded-3xl bg-black/12 p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-white/55">Seasons</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-white/55">
+                  Seasons
+                </p>
                 <p className="mt-3 font-heading text-4xl font-semibold">
                   {groupData?.seasons.length ?? 0}
                 </p>
@@ -435,7 +536,9 @@ export default function GroupDetailPage() {
                 <p className="text-xs uppercase tracking-[0.24em] text-white/55">
                   Top hiện tại
                 </p>
-                <p className="mt-3 text-lg font-semibold">{topPlayer?.fullName ?? "-"}</p>
+                <p className="mt-3 text-lg font-semibold">
+                  {topPlayer?.fullName ?? "-"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -443,17 +546,23 @@ export default function GroupDetailPage() {
 
         <Card className="border-0 bg-card/90 shadow-xl shadow-black/5 ring-1 ring-black/6">
           <CardHeader className="space-y-3">
-            <CardTitle className="font-heading text-2xl">Tình trạng bảng</CardTitle>
+            <CardTitle className="font-heading text-2xl">
+              Tình trạng bảng
+            </CardTitle>
             <CardDescription>
-              Theo dõi mùa đang chọn, người dẫn đầu và các thao tác quản trị quan trọng.
+              Theo dõi mùa đang chọn, người dẫn đầu và các thao tác quản trị
+              quan trọng.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-3xl border border-border/70 bg-muted/40 p-4">
               <p className="text-sm text-muted-foreground">Mùa đang xem</p>
+              <p className="mt-2 text-sm font-medium text-foreground">
+                Tên mùa giải đang xem: {currentSeason?.name ?? "Chưa chọn mùa giải"}
+              </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Badge variant={getSeasonBadgeVariant(currentSeason)}>
-                  {currentSeason ? currentSeason.status : "Chưa chọn mùa"}
+                  {getSeasonStatusLabel(currentSeason?.status)}
                 </Badge>
                 {currentSeason?.isLocked && (
                   <Badge variant="outline" className="gap-1">
@@ -478,22 +587,31 @@ export default function GroupDetailPage() {
         </Card>
       </section>
 
-      <Tabs defaultValue="overview" className="gap-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="gap-6">
         <div className="overflow-x-auto no-scrollbar">
-        <TabsList
-          variant="line"
-          className="h-auto w-max min-w-full justify-start gap-1 rounded-none border-b bg-transparent p-0"
-        >
-          <TabsTrigger value="overview" className="flex-none rounded-t-xl px-4 py-3">
-            Tổng quan
-          </TabsTrigger>
-          <TabsTrigger value="players" className="flex-none rounded-t-xl px-4 py-3">
-            Vận động viên
-          </TabsTrigger>
-          <TabsTrigger value="sessions" className="flex-none rounded-t-xl px-4 py-3">
-            Buổi đấu
-          </TabsTrigger>
-        </TabsList>
+          <TabsList
+            variant="line"
+            className="h-auto w-max min-w-full justify-start gap-1 rounded-none border-b bg-transparent p-0"
+          >
+            <TabsTrigger
+              value="overview"
+              className="flex-none rounded-t-xl px-4 py-3"
+            >
+              Tổng quan
+            </TabsTrigger>
+            <TabsTrigger
+              value="players"
+              className="flex-none rounded-t-xl px-4 py-3"
+            >
+              Vận động viên
+            </TabsTrigger>
+            <TabsTrigger
+              value="sessions"
+              className="flex-none rounded-t-xl px-4 py-3"
+            >
+              Buổi đấu
+            </TabsTrigger>
+          </TabsList>
         </div>
 
         <TabsContent value="overview" className="space-y-6">
@@ -508,8 +626,8 @@ export default function GroupDetailPage() {
                     Tạo và chọn mùa giải
                   </CardTitle>
                   <CardDescription>
-                    Mỗi bảng chỉ nên có một mùa mở tại một thời điểm. Sau khi khóa mùa,
-                    bạn có thể tạo mùa mới.
+                    Mỗi bảng chỉ nên có một mùa mở tại một thời điểm. Sau khi
+                    khóa mùa, bạn có thể tạo mùa mới.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -541,9 +659,16 @@ export default function GroupDetailPage() {
                         <Button
                           key={season._id}
                           type="button"
-                          variant={season._id === selectedSeasonId ? "default" : "outline"}
+                          variant={
+                            season._id === selectedSeasonId
+                              ? "default"
+                              : "outline"
+                          }
                           onClick={() => setSelectedSeasonId(season._id)}
-                          className="shrink-0"
+                          className={`shrink-0 ${getSeasonListButtonClass(
+                            season,
+                            season._id === selectedSeasonId,
+                          )}`}
                         >
                           {season.name}
                         </Button>
@@ -566,13 +691,13 @@ export default function GroupDetailPage() {
                       {currentSeason?.name ?? "Chọn một mùa để xem chi tiết"}
                     </CardTitle>
                     <CardDescription>
-                      Theo dõi trạng thái mùa, tổng số session/match và các hành động khóa
-                      hoặc xóa mùa.
+                      Theo dõi trạng thái mùa, tổng số session/match và các hành
+                      động khóa hoặc xóa mùa.
                     </CardDescription>
                   </div>
                   {currentSeason && (
                     <Badge variant={getSeasonBadgeVariant(currentSeason)}>
-                      {currentSeason.status}
+                      {getSeasonStatusLabel(currentSeason.status)}
                     </Badge>
                   )}
                 </div>
@@ -582,13 +707,17 @@ export default function GroupDetailPage() {
                   <>
                     <div className="grid gap-4 sm:grid-cols-3">
                       <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                        <p className="text-sm text-muted-foreground">Buổi đấu</p>
+                        <p className="text-sm text-muted-foreground">
+                          Buổi đấu
+                        </p>
                         <p className="mt-2 font-heading text-3xl font-semibold">
                           {seasonDetail?.rankings.totals.sessions ?? 0}
                         </p>
                       </div>
                       <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                        <p className="text-sm text-muted-foreground">Trận đấu</p>
+                        <p className="text-sm text-muted-foreground">
+                          Trận đấu
+                        </p>
                         <p className="mt-2 font-heading text-3xl font-semibold">
                           {seasonDetail?.rankings.totals.matches ?? 0}
                         </p>
@@ -640,8 +769,8 @@ export default function GroupDetailPage() {
                 </CardTitle>
               </div>
               <CardDescription>
-                Dữ liệu được cộng dồn theo mùa đang chọn, bao gồm điểm, số trận, số buổi
-                và số lần vắng.
+                Dữ liệu được cộng dồn theo mùa đang chọn, bao gồm điểm, số trận,
+                số buổi và số lần vắng.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -659,7 +788,9 @@ export default function GroupDetailPage() {
                               Hạng {row.rank}
                             </p>
                             <p className="break-words font-medium">
-                              {row.nickname ? `${row.fullName} (${row.nickname})` : row.fullName}
+                              {row.nickname
+                                ? `${row.fullName} (${row.nickname})`
+                                : row.fullName}
                             </p>
                           </div>
                           <Badge variant="secondary">{row.points} điểm</Badge>
@@ -674,11 +805,15 @@ export default function GroupDetailPage() {
                           </div>
                           <div className="rounded-2xl bg-muted/35 px-3 py-2">
                             <p className="text-muted-foreground">Tỷ lệ thắng</p>
-                            <p className="mt-1 font-medium">{Math.round(row.winRate * 100)}%</p>
+                            <p className="mt-1 font-medium">
+                              {Math.round(row.winRate * 100)}%
+                            </p>
                           </div>
                           <div className="rounded-2xl bg-muted/35 px-3 py-2">
                             <p className="text-muted-foreground">Hiệu số</p>
-                            <p className="mt-1 font-medium">{row.scoreDifference}</p>
+                            <p className="mt-1 font-medium">
+                              {row.scoreDifference}
+                            </p>
                           </div>
                           <div className="rounded-2xl bg-muted/35 px-3 py-2">
                             <p className="text-muted-foreground">Buổi / vắng</p>
@@ -693,37 +828,41 @@ export default function GroupDetailPage() {
 
                   <div className="hidden md:block">
                     <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>Vận động viên</TableHead>
-                      <TableHead>Điểm</TableHead>
-                      <TableHead>W-L</TableHead>
-                      <TableHead>Tỷ lệ thắng</TableHead>
-                      <TableHead>Hiệu số</TableHead>
-                      <TableHead>Buổi</TableHead>
-                      <TableHead>Vắng</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rankingRows.map((row) => (
-                      <TableRow key={row.playerId}>
-                        <TableCell>{row.rank}</TableCell>
-                        <TableCell>
-                          {row.nickname ? `${row.fullName} (${row.nickname})` : row.fullName}
-                        </TableCell>
-                        <TableCell>{row.points}</TableCell>
-                        <TableCell>
-                          {row.wins}-{row.losses}
-                        </TableCell>
-                        <TableCell>{Math.round(row.winRate * 100)}%</TableCell>
-                        <TableCell>{row.scoreDifference}</TableCell>
-                        <TableCell>{row.sessionsAttended}</TableCell>
-                        <TableCell>{row.absences}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>#</TableHead>
+                          <TableHead>Vận động viên</TableHead>
+                          <TableHead>Điểm</TableHead>
+                          <TableHead>W-L</TableHead>
+                          <TableHead>Tỷ lệ thắng</TableHead>
+                          <TableHead>Hiệu số</TableHead>
+                          <TableHead>Buổi</TableHead>
+                          <TableHead>Vắng</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rankingRows.map((row) => (
+                          <TableRow key={row.playerId}>
+                            <TableCell>{row.rank}</TableCell>
+                            <TableCell>
+                              {row.nickname
+                                ? `${row.fullName} (${row.nickname})`
+                                : row.fullName}
+                            </TableCell>
+                            <TableCell>{row.points}</TableCell>
+                            <TableCell>
+                              {row.wins}-{row.losses}
+                            </TableCell>
+                            <TableCell>
+                              {Math.round(row.winRate * 100)}%
+                            </TableCell>
+                            <TableCell>{row.scoreDifference}</TableCell>
+                            <TableCell>{row.sessionsAttended}</TableCell>
+                            <TableCell>{row.absences}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </>
               ) : (
@@ -747,7 +886,8 @@ export default function GroupDetailPage() {
                     Thêm vận động viên
                   </CardTitle>
                   <CardDescription>
-                    Giữ roster gọn gàng và đầy đủ trước khi bắt đầu tạo mùa hoặc sinh lịch.
+                    Giữ roster gọn gàng và đầy đủ trước khi bắt đầu tạo mùa hoặc
+                    sinh lịch.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -755,17 +895,17 @@ export default function GroupDetailPage() {
                 <Alert>
                   <AlertTitle>
                     {hasActiveSeason
-                      ? "Thành viên mới sẽ được thêm dưới dạng inactive"
+                      ? "Thành viên mới sẽ được thêm dưới dạng không hoạt động"
                       : hasReachedActiveLimit
-                        ? "Đã chạm giới hạn 20 active"
-                        : "Thành viên mới sẽ được thêm dưới dạng active"}
+                        ? "Đã chạm giới hạn 20 thành viên hoạt động"
+                        : "Thành viên mới sẽ được thêm dưới dạng hoạt động"}
                   </AlertTitle>
                   <AlertDescription>
                     {hasActiveSeason
-                      ? "Bảng đấu đang có mùa giải hoạt động. Thành viên mới sẽ ở trạng thái inactive và chưa thể tham gia mùa hiện tại."
+                      ? "Bảng đấu đang có mùa giải hoạt động. Thành viên mới sẽ ở trạng thái không hoạt động và chưa thể tham gia mùa hiện tại."
                       : hasReachedActiveLimit
-                        ? "Roster đã có đủ 20 thành viên active. Thành viên mới vẫn được lưu, nhưng sẽ ở trạng thái inactive cho đến khi bạn giảm bớt số active."
-                        : "Hiện không có mùa giải active, nên thành viên mới sẽ sẵn sàng cho các mùa hoặc buổi thi đấu tiếp theo ngay sau khi được thêm."}
+                        ? "Roster đã có đủ 20 thành viên hoạt động. Thành viên mới vẫn được lưu, nhưng sẽ ở trạng thái không hoạt động cho đến khi bạn giảm bớt số thành viên hoạt động."
+                        : "Hiện không có mùa giải hoạt động, nên thành viên mới sẽ sẵn sàng cho các mùa hoặc buổi thi đấu tiếp theo ngay sau khi được thêm."}
                   </AlertDescription>
                 </Alert>
                 <form className="space-y-4" onSubmit={handleAddPlayer}>
@@ -809,8 +949,14 @@ export default function GroupDetailPage() {
                       }
                     />
                   </div>
-                  <Button type="submit" className="w-full justify-center" disabled={addingPlayer}>
-                    {addingPlayer ? "Đang thêm thành viên..." : "Thêm người chơi"}
+                  <Button
+                    type="submit"
+                    className="w-full justify-center"
+                    disabled={addingPlayer}
+                  >
+                    {addingPlayer
+                      ? "Đang thêm thành viên..."
+                      : "Thêm người chơi"}
                   </Button>
                 </form>
               </CardContent>
@@ -818,29 +964,35 @@ export default function GroupDetailPage() {
 
             <Card className="border-0 bg-card/90 shadow-lg shadow-black/5 ring-1 ring-black/6">
               <CardHeader className="space-y-3">
-                <CardTitle className="font-heading text-2xl">Roster hiện tại</CardTitle>
+                <CardTitle className="font-heading text-2xl">
+                  Roster hiện tại
+                </CardTitle>
                 <CardDescription>
-                  Theo dõi danh sách active/inactive và tổng quy mô bảng để đảm bảo đủ
-                  điều kiện tạo mùa.
+                  Theo dõi danh sách hoạt động/không hoạt động và tổng quy mô
+                  bảng để đảm bảo đủ điều kiện tạo mùa.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                    <p className="text-sm text-muted-foreground">Active</p>
+                    <p className="text-sm text-muted-foreground">Hoạt động</p>
                     <p className="mt-2 font-heading text-3xl font-semibold">
                       {activePlayers.length}
                     </p>
                   </div>
                   <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
-                    <p className="text-sm text-muted-foreground">Inactive</p>
+                    <p className="text-sm text-muted-foreground">
+                      Không hoạt động
+                    </p>
                     <p className="mt-2 font-heading text-3xl font-semibold">
                       {inactivePlayerCount}
                     </p>
                   </div>
                   <div className="rounded-3xl border border-border/70 bg-background/75 p-4">
                     <p className="text-sm text-muted-foreground">Giới hạn</p>
-                    <p className="mt-2 font-heading text-3xl font-semibold">20</p>
+                    <p className="mt-2 font-heading text-3xl font-semibold">
+                      20
+                    </p>
                   </div>
                 </div>
 
@@ -848,14 +1000,19 @@ export default function GroupDetailPage() {
                   <Alert>
                     <AlertTitle>Đang có mùa giải hoạt động</AlertTitle>
                     <AlertDescription>
-                      Bạn chưa thể chuyển thành viên giữa active/inactive cho đến khi mùa hiện tại kết thúc.
+                      Bạn chưa thể chuyển thành viên giữa trạng thái hoạt
+                      động/không hoạt động cho đến khi mùa hiện tại kết thúc.
                     </AlertDescription>
                   </Alert>
                 ) : hasReachedActiveLimit ? (
                   <Alert>
-                    <AlertTitle>Roster đã đạt tối đa 20 active</AlertTitle>
+                    <AlertTitle>
+                      Roster đã đạt tối đa 20 thành viên hoạt động
+                    </AlertTitle>
                     <AlertDescription>
-                      Bạn vẫn có thể chuyển active sang inactive. Để kích hoạt thêm thành viên khác, hãy giảm bớt số active hiện tại.
+                      Bạn vẫn có thể chuyển từ hoạt động sang không hoạt động.
+                      Để kích hoạt thêm thành viên khác, hãy giảm bớt số thành
+                      viên hoạt động hiện tại.
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -869,33 +1026,40 @@ export default function GroupDetailPage() {
                       <div className="min-w-0 space-y-1">
                         <p className="font-medium">{player.fullName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {player.nickname || player.contactInfo || "Chưa có ghi chú thêm."}
+                          {player.nickname ||
+                            player.contactInfo ||
+                            "Chưa có ghi chú thêm."}
                         </p>
                       </div>
                       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                        <Badge variant={player.status === "active" ? "default" : "secondary"}>
-                          {player.status}
+                        <Badge
+                          variant={
+                            player.status === "active" ? "default" : "secondary"
+                          }
+                        >
+                          {getPlayerStatusLabel(player.status)}
                         </Badge>
                         {hasActiveSeason ? (
-                          <span className="text-sm text-muted-foreground">
-                            Khóa khi mùa đang hoạt động
-                          </span>
+                          <span className="text-sm text-muted-foreground"></span>
                         ) : (
                           <Button
                             type="button"
                             size="sm"
-                            variant={player.status === "active" ? "outline" : "default"}
+                            variant={
+                              player.status === "active" ? "outline" : "default"
+                            }
                             className="w-full sm:w-auto"
                             disabled={
                               updatingPlayerId === player._id ||
-                              (player.status === "inactive" && hasReachedActiveLimit)
+                              (player.status === "inactive" &&
+                                hasReachedActiveLimit)
                             }
                             onClick={() => handleTogglePlayerStatus(player)}
                           >
                             {updatingPlayerId === player._id
                               ? "Đang cập nhật..."
                               : player.status === "active"
-                                ? "Chuyển inactive"
+                                ? "Dừng hoạt động"
                                 : "Kích hoạt"}
                           </Button>
                         )}
@@ -923,7 +1087,10 @@ export default function GroupDetailPage() {
               seasonDetail.sessions.map((session) => (
                 <SessionEditor
                   key={`${session._id}-${session.isResultsSaved}-${session.matches
-                    .map((match) => `${match._id}:${match.scoreA ?? ""}-${match.scoreB ?? ""}`)
+                    .map(
+                      (match) =>
+                        `${match._id}:${match.scoreA ?? ""}-${match.scoreB ?? ""}`,
+                    )
                     .join("|")}`}
                   token={token ?? ""}
                   session={session}
@@ -936,7 +1103,9 @@ export default function GroupDetailPage() {
               <Card className="border-0 bg-card/90 shadow-lg shadow-black/5 ring-1 ring-black/6">
                 <CardContent className="px-6 py-10 text-center">
                   <CalendarDays className="mx-auto mb-3 size-5 text-muted-foreground" />
-                  <p className="font-medium">Chưa có buổi thi đấu nào trong mùa này.</p>
+                  <p className="font-medium">
+                    Chưa có buổi thi đấu nào trong mùa này.
+                  </p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Tạo session đầu tiên để bắt đầu sinh lịch và nhập kết quả.
                   </p>
@@ -964,7 +1133,7 @@ export default function GroupDetailPage() {
             {
               icon: Crown,
               label: "Trạng thái",
-              value: seasonDetail.season.status,
+              value: getSeasonStatusLabel(seasonDetail.season.status),
             },
           ].map((item) => {
             const Icon = item.icon;
@@ -979,7 +1148,9 @@ export default function GroupDetailPage() {
                     <Icon className="size-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">{item.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.label}
+                    </p>
                     <p className="truncate font-medium">{item.value}</p>
                   </div>
                 </CardContent>

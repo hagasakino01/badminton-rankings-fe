@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -22,9 +23,11 @@ import type { User } from "@/types/api";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const hasExpiredSession = searchParams.get("reason") === "session-expired";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,6 +109,15 @@ export default function LoginPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
+            {hasExpiredSession && (
+              <Alert variant="destructive">
+                <AlertTitle>Phiên đăng nhập đã hết hạn</AlertTitle>
+                <AlertDescription>
+                  Bạn đã được đăng xuất tự động. Vui lòng đăng nhập lại để tiếp tục.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

@@ -4,6 +4,7 @@ import {
   endAppRequest,
   showApiErrorModal,
 } from "./app-feedback";
+import { clearSession } from "./auth";
 
 type ApiOptions = RequestInit & {
   token?: string;
@@ -170,6 +171,20 @@ function resolveApiErrorMessage(errorBody: ApiErrorBody | null) {
   return translateApiMessage(issueMessage ?? errorBody?.message ?? "Request failed");
 }
 
+function redirectToExpiredSessionLogin() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  clearSession();
+
+  if (window.location.pathname === "/login") {
+    return;
+  }
+
+  window.location.replace("/login?reason=session-expired");
+}
+
 export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
   const {
     token,
@@ -204,8 +219,13 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
     if (!response.ok) {
       const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
       const error = new ApiError(resolveApiErrorMessage(errorBody), response.status);
+      const shouldLogoutForExpiredSession = Boolean(token) && response.status === 401;
 
-      if (showErrorModal) {
+      if (shouldLogoutForExpiredSession) {
+        redirectToExpiredSessionLogin();
+      }
+
+      if (showErrorModal && !shouldLogoutForExpiredSession) {
         showApiErrorModal(error.message, errorTitle);
       }
 

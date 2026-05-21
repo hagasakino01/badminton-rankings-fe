@@ -29,9 +29,12 @@ type AppFeedbackNotificationInput = {
   durationMs?: number;
 };
 
+type AppFeedbackErrorDismissHandler = () => void;
+
 const DEFAULT_NOTIFICATION_DURATION_MS = 3600;
 
 const listeners = new Set<() => void>();
+const errorDismissHandlers = new Map<string, AppFeedbackErrorDismissHandler>();
 
 let state: AppFeedbackState = {
   pendingRequests: 0,
@@ -86,13 +89,27 @@ export function endAppRequest() {
   }));
 }
 
-export function showApiErrorModal(message: string, title = "Không thể xử lý yêu cầu") {
+export function showApiErrorModal(
+  message: string,
+  title = "Không thể xử lý yêu cầu",
+  onDismiss?: AppFeedbackErrorDismissHandler,
+) {
+  if (!canUseDOM()) {
+    return;
+  }
+
+  const errorId = createFeedbackId("error");
+
+  if (onDismiss) {
+    errorDismissHandlers.set(errorId, onDismiss);
+  }
+
   updateState((current) => ({
     ...current,
     errorQueue: [
       ...current.errorQueue,
       {
-        id: createFeedbackId("error"),
+        id: errorId,
         title,
         message,
       },
@@ -101,10 +118,28 @@ export function showApiErrorModal(message: string, title = "Không thể xử l�
 }
 
 export function dismissCurrentApiErrorModal() {
-  updateState((current) => ({
-    ...current,
-    errorQueue: current.errorQueue.slice(1),
-  }));
+  if (!canUseDOM()) {
+    return;
+  }
+
+  let dismissedError: AppFeedbackError | undefined;
+
+  updateState((current) => {
+    dismissedError = current.errorQueue[0];
+
+    return {
+      ...current,
+      errorQueue: current.errorQueue.slice(1),
+    };
+  });
+
+  if (!dismissedError) {
+    return;
+  }
+
+  const dismissHandler = errorDismissHandlers.get(dismissedError.id);
+  errorDismissHandlers.delete(dismissedError.id);
+  dismissHandler?.();
 }
 
 export function pushAppNotification({

@@ -124,7 +124,7 @@ export default function HomePage() {
                   <p className="font-medium">Nhóm người chơi</p>
                 </div>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Quản lý danh sách thành viên, trạng thái active/inactive và lịch sử tham gia theo
+                  Quản lý danh sách thành viên, trạng thái hoạt động/không hoạt động và lịch sử tham gia theo
                   buổi.
                 </p>
               </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
               {
                 step: "01",
                 title: "Dựng bảng & roster",
-                text: "Tạo group, thêm người chơi và kiểm soát danh sách active trước khi mở mùa.",
+                text: "Tạo group, thêm người chơi và kiểm soát danh sách hoạt động trước khi mở mùa.",
               },
               {
                 step: "02",
