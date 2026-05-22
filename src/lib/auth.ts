@@ -1,3 +1,4 @@
+import { API_URL } from "./config";
 import type { User } from "@/types/api";
 
 const STORAGE_KEY = "badminton-rankings-session";
@@ -6,7 +7,6 @@ let cachedRawSession: string | null | undefined;
 let cachedSession: AuthSession | null = null;
 
 export type AuthSession = {
-  token: string;
   user: User;
 };
 
@@ -59,16 +59,29 @@ export function clearSession() {
   notifySessionChanged();
 }
 
-export function updateSessionUser(user: User, token?: string) {
+export function updateSessionUser(user: User) {
   const currentSession = readSession();
   if (!currentSession) {
     return;
   }
 
   persistSession({
-    token: token ?? currentSession.token,
     user,
   });
+}
+
+export async function logoutSession() {
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch {
+    // Clear client state even if the backend cookie has already expired.
+  } finally {
+    clearSession();
+  }
 }
 
 export function subscribeSessionChange(listener: () => void) {

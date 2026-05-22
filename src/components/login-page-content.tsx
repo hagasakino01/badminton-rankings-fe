@@ -36,7 +36,7 @@ export function LoginPageContent({ hasExpiredSession }: LoginPageContentProps) {
     setSubmitting(true);
 
     try {
-      const response = await apiFetch<{ token: string; user: User }>(
+      const response = await apiFetch<{ user: User }>(
         "/auth/login",
         {
           method: "POST",

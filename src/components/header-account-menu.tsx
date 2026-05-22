@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
 import {
-  clearSession,
+  logoutSession,
   readSession,
   subscribeSessionChange,
   updateSessionUser,
@@ -33,7 +33,6 @@ function getSessionSnapshot() {
 }
 
 type ProfileResponse = {
-  token: string;
   user: User;
 };
 
@@ -136,7 +135,7 @@ export function HeaderAccountMenu() {
 
   async function handleProfileSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session?.token || !hasProfileChanges) {
+    if (!session || !hasProfileChanges) {
       return;
     }
 
@@ -146,14 +145,14 @@ export function HeaderAccountMenu() {
     try {
       const response = await apiFetch<ProfileResponse>("/auth/me", {
         method: "PUT",
-        token: session.token,
+        requiresAuth: true,
         body: JSON.stringify({
           name: profileForm.name.trim(),
           email: profileForm.email.trim(),
         }),
       });
 
-      updateSessionUser(response.user, response.token);
+      updateSessionUser(response.user);
       setInitialProfileForm({
         name: response.user.name,
         email: response.user.email,
@@ -186,7 +185,7 @@ export function HeaderAccountMenu() {
 
   async function handlePasswordSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!session?.token) {
+    if (!session) {
       return;
     }
 
@@ -204,7 +203,7 @@ export function HeaderAccountMenu() {
     try {
       await apiFetch<PasswordResponse>("/auth/change-password", {
         method: "POST",
-        token: session.token,
+        requiresAuth: true,
         body: JSON.stringify(passwordForm),
       });
 
@@ -230,9 +229,9 @@ export function HeaderAccountMenu() {
     setIsPasswordOpen(false);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
     setIsMenuOpen(false);
-    clearSession();
+    await logoutSession();
     router.push("/login");
   }
 

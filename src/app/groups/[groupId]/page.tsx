@@ -131,7 +131,7 @@ export default function GroupDetailPage() {
   const [updatingPlayerId, setUpdatingPlayerId] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [deletingSeason, setDeletingSeason] = useState(false);
-  const token = readSession()?.token ?? null;
+  const hasSession = Boolean(readSession());
 
   const playerMap = useMemo(
     () =>
@@ -166,9 +166,9 @@ export default function GroupDetailPage() {
   const topPlayer = seasonDetail?.rankings.rows[0];
   const rankingRows = seasonDetail?.rankings.rows ?? [];
 
-  async function loadGroup(sessionToken: string) {
+  async function loadGroup() {
     const response = await apiFetch<GroupResponse>(`/groups/${groupId}`, {
-      token: sessionToken,
+      requiresAuth: true,
     });
 
     setGroupData(response);
@@ -180,27 +180,25 @@ export default function GroupDetailPage() {
     return response;
   }
 
-  async function loadSeason(sessionToken: string, seasonId: string) {
+  async function loadSeason(seasonId: string) {
     const response = await apiFetch<SeasonDetail>(`/seasons/${seasonId}`, {
-      token: sessionToken,
+      requiresAuth: true,
     });
     setSeasonDetail(response);
     return response;
   }
 
   useEffect(() => {
-    if (!token) {
+    if (!hasSession) {
       router.push("/login");
       return;
     }
-
-    const sessionToken = token;
     let isMounted = true;
 
     async function bootstrap() {
       try {
         const response = await apiFetch<GroupResponse>(`/groups/${groupId}`, {
-          token: sessionToken,
+          requiresAuth: true,
         });
         if (!isMounted) return;
 
@@ -219,14 +217,12 @@ export default function GroupDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [groupId, router, selectedSeasonId, token]);
+  }, [groupId, hasSession, router, selectedSeasonId]);
 
   useEffect(() => {
-    if (!token || !selectedSeasonId) {
+    if (!hasSession || !selectedSeasonId) {
       return;
     }
-
-    const sessionToken = token;
     let isMounted = true;
 
     async function syncSeason() {
@@ -234,7 +230,7 @@ export default function GroupDetailPage() {
         const response = await apiFetch<SeasonDetail>(
           `/seasons/${selectedSeasonId}`,
           {
-            token: sessionToken,
+            requiresAuth: true,
           },
         );
         if (!isMounted) return;
@@ -249,24 +245,24 @@ export default function GroupDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [selectedSeasonId, token]);
+  }, [hasSession, selectedSeasonId]);
 
   async function refreshAll(nextSeasonId?: string) {
-    if (!token) {
+    if (!hasSession) {
       return;
     }
 
-    await loadGroup(token);
+    await loadGroup();
 
     const seasonId = nextSeasonId ?? selectedSeasonId;
     if (seasonId) {
-      await loadSeason(token, seasonId);
+      await loadSeason(seasonId);
     }
   }
 
   async function handleAddPlayer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token) {
+    if (!hasSession) {
       return;
     }
 
@@ -277,7 +273,7 @@ export default function GroupDetailPage() {
         `/groups/${groupId}/players`,
         {
           method: "POST",
-          token,
+          requiresAuth: true,
           body: JSON.stringify(playerForm),
         },
       );
@@ -297,7 +293,7 @@ export default function GroupDetailPage() {
   }
 
   async function handleTogglePlayerStatus(player: Player) {
-    if (!token) {
+    if (!hasSession) {
       return;
     }
 
@@ -309,7 +305,7 @@ export default function GroupDetailPage() {
         `/groups/${groupId}/players/${player._id}/status`,
         {
           method: "PATCH",
-          token,
+          requiresAuth: true,
           body: JSON.stringify({ status: nextStatus }),
         },
       );
@@ -329,7 +325,7 @@ export default function GroupDetailPage() {
 
   async function handleCreateSeason(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token) {
+    if (!hasSession) {
       return;
     }
 
@@ -347,7 +343,7 @@ export default function GroupDetailPage() {
         `/seasons/groups/${groupId}/seasons`,
         {
           method: "POST",
-          token,
+          requiresAuth: true,
           showErrorModal: false,
           body: JSON.stringify({ name: seasonName }),
         },
@@ -380,14 +376,14 @@ export default function GroupDetailPage() {
   }
 
   async function handleFinalizeSeason() {
-    if (!token || !selectedSeasonId) {
+    if (!hasSession || !selectedSeasonId) {
       return;
     }
 
     try {
       await apiFetch(`/seasons/${selectedSeasonId}/finalize`, {
         method: "POST",
-        token,
+        requiresAuth: true,
       });
 
       pushAppNotification({
@@ -402,7 +398,7 @@ export default function GroupDetailPage() {
   }
 
   async function handleDeleteGroup() {
-    if (!token || !groupData) {
+    if (!hasSession || !groupData) {
       return;
     }
 
@@ -418,7 +414,7 @@ export default function GroupDetailPage() {
     try {
       await apiFetch(`/groups/${groupId}`, {
         method: "DELETE",
-        token,
+        requiresAuth: true,
       });
 
       pushAppNotification({
@@ -435,7 +431,7 @@ export default function GroupDetailPage() {
   }
 
   async function handleDeleteSeason() {
-    if (!token || !seasonDetail) {
+    if (!hasSession || !seasonDetail) {
       return;
     }
 
@@ -451,7 +447,7 @@ export default function GroupDetailPage() {
     try {
       await apiFetch(`/seasons/${seasonDetail.season._id}`, {
         method: "DELETE",
-        token,
+        requiresAuth: true,
       });
 
       const remainingSeasons = (groupData?.seasons ?? []).filter(
@@ -1074,7 +1070,6 @@ export default function GroupDetailPage() {
 
         <TabsContent value="sessions" className="space-y-6">
           <SessionCreationForm
-            token={token}
             selectedSeasonId={selectedSeasonId}
             currentSeasonLocked={currentSeasonLocked}
             activePlayers={activePlayers}
@@ -1092,7 +1087,6 @@ export default function GroupDetailPage() {
                         `${match._id}:${match.scoreA ?? ""}-${match.scoreB ?? ""}`,
                     )
                     .join("|")}`}
-                  token={token ?? ""}
                   session={session}
                   seasonLocked={seasonDetail.season.isLocked}
                   playerMap={playerMap}

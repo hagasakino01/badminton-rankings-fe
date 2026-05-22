@@ -38,7 +38,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type SessionCreationFormProps = {
-  token: string | null;
   selectedSeasonId: string;
   currentSeasonLocked: boolean;
   activePlayers: Player[];
@@ -65,7 +64,6 @@ function buildPlayerCountLabel(
 }
 
 export function SessionCreationForm({
-  token,
   selectedSeasonId,
   currentSeasonLocked,
   activePlayers,
@@ -123,10 +121,7 @@ export function SessionCreationForm({
   const manualParticipantLimitExceeded =
     scheduleType === "manual" && selectedParticipants.length > 12;
   const canCreateSession =
-    Boolean(token) &&
-    Boolean(selectedSeasonId) &&
-    !currentSeasonLocked &&
-    hasEnoughParticipants;
+    Boolean(selectedSeasonId) && !currentSeasonLocked && hasEnoughParticipants;
   const remainingBlankMatches = Math.max(
     manualValidation.requiredMatchCount - manualMatches.length,
     0,
@@ -302,7 +297,7 @@ export function SessionCreationForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token || !selectedSeasonId) {
+    if (!selectedSeasonId) {
       return;
     }
 
@@ -331,7 +326,7 @@ export function SessionCreationForm({
     try {
       await apiFetch(`/seasons/${selectedSeasonId}/sessions`, {
         method: "POST",
-        token,
+        requiresAuth: true,
         body: JSON.stringify({
           title: title.trim() || undefined,
           note: note.trim() || undefined,

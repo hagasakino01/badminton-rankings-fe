@@ -7,7 +7,7 @@ import {
 import { clearSession } from "./auth";
 
 type ApiOptions = RequestInit & {
-  token?: string;
+  requiresAuth?: boolean;
   showGlobalLoading?: boolean;
   showErrorModal?: boolean;
   errorTitle?: string;
@@ -187,7 +187,7 @@ function redirectToExpiredSessionLogin() {
 
 export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
   const {
-    token,
+    requiresAuth = false,
     showGlobalLoading = true,
     showErrorModal = true,
     errorTitle,
@@ -197,10 +197,6 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
 
   if (!headers.has("Content-Type") && requestOptions.body) {
     headers.set("Content-Type", "application/json");
-  }
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const shouldTrackRequest = typeof window !== "undefined" && showGlobalLoading;
@@ -213,13 +209,14 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}) {
     const response = await fetch(`${API_URL}${path}`, {
       ...requestOptions,
       headers,
+      credentials: requestOptions.credentials ?? "include",
       cache: "no-store",
     });
 
     if (!response.ok) {
       const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
       const error = new ApiError(resolveApiErrorMessage(errorBody), response.status);
-      const shouldLogoutForExpiredSession = Boolean(token) && response.status === 401;
+      const shouldLogoutForExpiredSession = requiresAuth && response.status === 401;
 
       if (shouldLogoutForExpiredSession) {
         redirectToExpiredSessionLogin();

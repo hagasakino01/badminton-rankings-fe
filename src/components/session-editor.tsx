@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 import type { Match, Session } from "@/types/api";
 
 type SessionEditorProps = {
-  token: string;
   session: Session;
   seasonLocked: boolean;
   playerMap: Record<string, string>;
@@ -52,7 +51,6 @@ function buildInitialDraft(matches: Match[]) {
 }
 
 export function SessionEditor({
-  token,
   session,
   seasonLocked,
   playerMap,
@@ -154,7 +152,7 @@ export function SessionEditor({
     try {
       await apiFetch(`/sessions/${session._id}/results`, {
         method: "POST",
-        token,
+        requiresAuth: true,
         body: JSON.stringify({ results }),
       });
 
@@ -189,7 +187,7 @@ export function SessionEditor({
     try {
       await apiFetch(`/sessions/${session._id}`, {
         method: "DELETE",
-        token,
+        requiresAuth: true,
       });
 
       pushAppNotification({

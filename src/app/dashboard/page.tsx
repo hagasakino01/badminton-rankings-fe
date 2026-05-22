@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
 import { pushAppNotification } from "@/lib/app-feedback";
-import { clearSession, readSession } from "@/lib/auth";
+import { logoutSession, readSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { Group } from "@/types/api";
 
@@ -40,28 +40,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
-  const token = readSession()?.token ?? null;
+  const hasSession = Boolean(readSession());
 
-  async function loadGroups(sessionToken: string) {
+  async function loadGroups() {
     const response = await apiFetch<{ groups: Group[] }>("/groups", {
-      token: sessionToken,
+      requiresAuth: true,
     });
     setGroups(response.groups);
   }
 
   useEffect(() => {
-    if (!token) {
+    if (!hasSession) {
       router.push("/login");
       return;
     }
-
-    const sessionToken = token;
     let isMounted = true;
 
     async function bootstrap() {
       try {
         const response = await apiFetch<{ groups: Group[] }>("/groups", {
-          token: sessionToken,
+          requiresAuth: true,
         });
         if (!isMounted) return;
         setGroups(response.groups);
@@ -79,18 +77,18 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [router, token]);
+  }, [hasSession, router]);
 
   async function handleCreateGroup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token) return;
+    if (!hasSession) return;
 
     setSubmitting(true);
 
     try {
       await apiFetch("/groups", {
         method: "POST",
-        token,
+        requiresAuth: true,
         body: JSON.stringify({ name, description }),
       });
 
@@ -100,7 +98,7 @@ export default function DashboardPage() {
         title: "Tạo bảng thành công",
         message: "Bảng đấu mới đã được thêm vào dashboard.",
       });
-      await loadGroups(token);
+      await loadGroups();
     } catch {
       return;
     } finally {
@@ -109,7 +107,7 @@ export default function DashboardPage() {
   }
 
   async function handleDeleteGroup(groupId: string, groupName: string) {
-    if (!token) return;
+    if (!hasSession) return;
 
     const confirmed = window.confirm(
       `Xóa bảng "${groupName}" và toàn bộ dữ liệu liên quan?`,
@@ -121,7 +119,7 @@ export default function DashboardPage() {
     try {
       await apiFetch(`/groups/${groupId}`, {
         method: "DELETE",
-        token,
+        requiresAuth: true,
       });
 
       pushAppNotification({
@@ -129,7 +127,7 @@ export default function DashboardPage() {
         message: `Bảng "${groupName}" đã được gỡ khỏi hệ thống.`,
         tone: "info",
       });
-      await loadGroups(token);
+      await loadGroups();
     } catch {
       return;
     } finally {
@@ -137,8 +135,8 @@ export default function DashboardPage() {
     }
   }
 
-  function handleLogout() {
-    clearSession();
+  async function handleLogout() {
+    await logoutSession();
     router.push("/login");
   }
 
@@ -223,7 +221,7 @@ export default function DashboardPage() {
               variant="outline"
               size="lg"
               className="w-full justify-center gap-2"
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
             >
               <LogOut className="size-4" />
               Đăng xuất

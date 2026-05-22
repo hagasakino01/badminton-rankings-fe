@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     try {
-      const response = await apiFetch<{ token: string; user: User }>(
+      const response = await apiFetch<{ user: User }>(
         "/auth/register",
         {
           method: "POST",
