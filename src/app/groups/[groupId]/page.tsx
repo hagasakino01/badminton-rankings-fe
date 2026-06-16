@@ -592,19 +592,19 @@ export default function GroupDetailPage() {
           >
             <TabsTrigger
               value="overview"
-              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3"
             >
               Tổng quan
             </TabsTrigger>
             <TabsTrigger
               value="players"
-              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3"
             >
               Vận động viên
             </TabsTrigger>
             <TabsTrigger
               value="sessions"
-              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3"
             >
               Buổi đấu
             </TabsTrigger>
