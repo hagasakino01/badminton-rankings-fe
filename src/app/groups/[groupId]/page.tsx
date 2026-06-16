@@ -554,7 +554,8 @@ export default function GroupDetailPage() {
             <div className="rounded-3xl border border-border/70 bg-muted/40 p-4">
               <p className="text-sm text-muted-foreground">Mùa đang xem</p>
               <p className="mt-2 text-sm font-medium text-foreground">
-                Tên mùa giải đang xem: {currentSeason?.name ?? "Chưa chọn mùa giải"}
+                Tên mùa giải đang xem:{" "}
+                {currentSeason?.name ?? "Chưa chọn mùa giải"}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Badge variant={getSeasonBadgeVariant(currentSeason)}>
@@ -591,19 +592,19 @@ export default function GroupDetailPage() {
           >
             <TabsTrigger
               value="overview"
-              className="flex-none rounded-t-xl px-4 py-3"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
             >
               Tổng quan
             </TabsTrigger>
             <TabsTrigger
               value="players"
-              className="flex-none rounded-t-xl px-4 py-3"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
             >
               Vận động viên
             </TabsTrigger>
             <TabsTrigger
               value="sessions"
-              className="flex-none rounded-t-xl px-4 py-3"
+              className="flex-none rounded-t-xl rounded-b-none px-4 py-3 data-active:border-b-2 data-active:border-b-primary"
             >
               Buổi đấu
             </TabsTrigger>

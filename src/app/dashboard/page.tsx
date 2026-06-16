@@ -254,7 +254,7 @@ export default function DashboardPage() {
                   id="group-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  placeholder="Ví dụ: CLB Tối Thứ 5"
+                  placeholder="Ví dụ: CLB của tôi"
                   required
                 />
               </div>

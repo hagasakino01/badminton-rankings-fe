@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import { pushAppNotification } from "@/lib/app-feedback";
 import { persistSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/api";
@@ -27,22 +27,35 @@ type LoginPageContentProps = {
 
 export function LoginPageContent({ hasExpiredSession }: LoginPageContentProps) {
   const router = useRouter();
+  const hasShownExpiredSessionNoticeRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!hasExpiredSession || hasShownExpiredSessionNoticeRef.current) {
+      return;
+    }
+
+    hasShownExpiredSessionNoticeRef.current = true;
+    pushAppNotification({
+      title: "Phiên đăng nhập đã hết hạn",
+      message: "Bạn đã được đăng xuất tự động. Vui lòng đăng nhập lại để tiếp tục.",
+      tone: "info",
+      durationMs: 5000,
+    });
+    router.replace("/login");
+  }, [hasExpiredSession, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
 
     try {
-      const response = await apiFetch<{ user: User }>(
-        "/auth/login",
-        {
-          method: "POST",
-          body: JSON.stringify({ email, password }),
-        },
-      );
+      const response = await apiFetch<{ user: User }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
 
       persistSession(response);
       router.push("/dashboard");
@@ -68,8 +81,8 @@ export function LoginPageContent({ hasExpiredSession }: LoginPageContentProps) {
                   Quay lại bàn điều phối của giải đấu.
                 </h1>
                 <p className="max-w-xl text-base leading-7 text-white/78">
-                  Mọi session, mùa giải và bảng xếp hạng đang chờ bạn tiếp tục
-                  điều phối trong một giao diện mới rõ ràng hơn.
+                  Mọi session, mùa giải và bảng xếp hạng đang chờ bạn tiếp tục điều
+                  phối trong một giao diện mới rõ ràng hơn.
                 </p>
               </div>
             </div>
@@ -101,9 +114,7 @@ export function LoginPageContent({ hasExpiredSession }: LoginPageContentProps) {
               <KeyRound className="size-5" />
             </div>
             <div className="space-y-2">
-              <CardTitle className="font-heading text-2xl">
-                Đăng nhập
-              </CardTitle>
+              <CardTitle className="font-heading text-2xl">Đăng nhập</CardTitle>
               <CardDescription>
                 Truy cập dashboard để tạo bảng, mở mùa giải và nhập kết quả thi
                 đấu.
@@ -111,15 +122,6 @@ export function LoginPageContent({ hasExpiredSession }: LoginPageContentProps) {
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
-            {hasExpiredSession && (
-              <Alert variant="destructive">
-                <AlertTitle>Phiên đăng nhập đã hết hạn</AlertTitle>
-                <AlertDescription>
-                  Bạn đã được đăng xuất tự động. Vui lòng đăng nhập lại để tiếp tục.
-                </AlertDescription>
-              </Alert>
-            )}
-
             <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
