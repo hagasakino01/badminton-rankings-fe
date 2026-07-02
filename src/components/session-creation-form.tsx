@@ -81,6 +81,7 @@ export function SessionCreationForm({
   );
   const [participantsCustomized, setParticipantsCustomized] = useState(false);
   const [manualMatches, setManualMatches] = useState<ManualMatchDraft[]>([]);
+  const [manualEditorVisible, setManualEditorVisible] = useState(false);
   const [status, setStatus] = useState<StatusState | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -126,6 +127,7 @@ export function SessionCreationForm({
     manualValidation.requiredMatchCount - manualMatches.length,
     0,
   );
+  const isManualEditorVisible = scheduleType === "manual" && manualEditorVisible;
 
   function formatPlayerIssues(players: Array<{ playerId: string; count: number }>) {
     return players
@@ -179,12 +181,35 @@ export function SessionCreationForm({
   }
 
   function handleScheduleTypeChange(nextType: "auto" | "manual") {
-    setScheduleType(nextType);
     setStatus(null);
-
-    if (nextType === "manual") {
-      ensureInitialManualMatches();
+    if (nextType === scheduleType) {
+      return;
     }
+
+    setScheduleType(nextType);
+    setManualEditorVisible(false);
+  }
+
+  function handlePrepareManualSchedule() {
+    if (!hasEnoughParticipants) {
+      setStatus({
+        type: "error",
+        message: "C\u1ea7n ch\u1ecdn \u00edt nh\u1ea5t 5 ng\u01b0\u1eddi tham gia \u0111\u1ec3 t\u1ea1o bu\u1ed5i thi \u0111\u1ea5u.",
+      });
+      return;
+    }
+
+    if (selectedParticipants.length > 12) {
+      setStatus({
+        type: "error",
+        message: "L\u1ecbch th\u1ee7 c\u00f4ng ch\u1ec9 h\u1ed7 tr\u1ee3 t\u1ed1i \u0111a 12 ng\u01b0\u1eddi tham gia.",
+      });
+      return;
+    }
+
+    setStatus(null);
+    ensureInitialManualMatches();
+    setManualEditorVisible(true);
   }
 
   function handleParticipantToggle(playerId: string, nextChecked: boolean) {
@@ -304,8 +329,13 @@ export function SessionCreationForm({
     if (!hasEnoughParticipants) {
       setStatus({
         type: "error",
-        message: "Cần chọn ít nhất 5 người tham gia để tạo buổi thi đấu.",
+        message: "C\u1ea7n ch\u1ecdn \u00edt nh\u1ea5t 5 ng\u01b0\u1eddi tham gia \u0111\u1ec3 t\u1ea1o bu\u1ed5i thi \u0111\u1ea5u.",
       });
+      return;
+    }
+
+    if (scheduleType === "manual" && !isManualEditorVisible) {
+      handlePrepareManualSchedule();
       return;
     }
 
@@ -557,7 +587,7 @@ export function SessionCreationForm({
             </Alert>
           )}
 
-          {scheduleType === "manual" && (
+          {isManualEditorVisible && (
             <div className="space-y-6 rounded-[28px] border border-border/70 bg-background/70 p-4 sm:p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -866,23 +896,32 @@ export function SessionCreationForm({
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
-              type="submit"
+              type={scheduleType === "manual" && !isManualEditorVisible ? "button" : "submit"}
               size="lg"
+              onClick={
+                scheduleType === "manual" && !isManualEditorVisible
+                  ? handlePrepareManualSchedule
+                  : undefined
+              }
               disabled={!canCreateSession || submitting || manualParticipantLimitExceeded}
               className="w-full justify-center sm:w-auto"
             >
               {scheduleType === "manual"
-                ? submitting
-                  ? "Đang lưu lịch thủ công..."
-                  : "Lưu lịch thủ công"
+                ? !isManualEditorVisible
+                  ? "Sinh l\u1ecbch thi \u0111\u1ea5u"
+                  : submitting
+                    ? "\u0110ang l\u01b0u l\u1ecbch th\u1ee7 c\u00f4ng..."
+                    : "L\u01b0u l\u1ecbch th\u1ee7 c\u00f4ng"
                 : submitting
-                  ? "Đang sinh lịch..."
-                  : "Sinh lịch thi đấu"}
+                  ? "\u0110ang sinh l\u1ecbch..."
+                  : "Sinh l\u1ecbch thi \u0111\u1ea5u"}
             </Button>
             <p className="text-sm leading-6 text-muted-foreground">
               {scheduleType === "manual"
-                ? "Mỗi người chơi phải xuất hiện đúng 4 trận. Hệ thống sẽ chặn lưu nếu lịch chưa hợp lệ."
-                : "Lịch tự động sẽ dùng danh sách người chơi đã chọn và tạo toàn bộ trận cho session này."}
+                ? isManualEditorVisible
+                  ? "M\u1ed7i ng\u01b0\u1eddi ch\u01a1i ph\u1ea3i xu\u1ea5t hi\u1ec7n \u0111\u00fang 4 tr\u1eadn. H\u1ec7 th\u1ed1ng s\u1ebd ch\u1eb7n l\u01b0u n\u1ebfu l\u1ecbch ch\u01b0a h\u1ee3p l\u1ec7."
+                  : "B\u1ea5m Sinh l\u1ecbch thi \u0111\u1ea5u \u0111\u1ec3 m\u1edf ph\u1ea7n nh\u1eadp c\u00e1c tr\u1eadn th\u1ee7 c\u00f4ng cho session n\u00e0y."
+                : "L\u1ecbch t\u1ef1 \u0111\u1ed9ng s\u1ebd d\u00f9ng danh s\u00e1ch ng\u01b0\u1eddi ch\u01a1i \u0111\u00e3 ch\u1ecdn v\u00e0 t\u1ea1o to\u00e0n b\u1ed9 tr\u1eadn cho session n\u00e0y."}
             </p>
           </div>
         </form>
